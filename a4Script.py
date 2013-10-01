@@ -63,7 +63,7 @@ def testAlignAndDenoise(imageList, outputname):
     imADN = a4.alignAndDenoise(imageList)
     io.imwrite(imADN, str(outputname+'_ADN_x%03d'%(len(imageList)))+".png")
 
-def testBasicDemosaic(raw, outputname, gos =1, rosy=1,rosx=1,bosy=0,bosx=0):
+def testBasicDemosaic(raw, outputname, gos=1, rosy=1,rosx=1,bosy=0,bosx=0):
     rout = a4.basicDemosaic(raw, gos, rosy, rosx, bosy, bosx)
     io.imwrite(rout, outputname+'_basicDemosaic.png')
 
@@ -84,31 +84,25 @@ def testSergei():
 
 
 #Input data:
-#
-#Archive_2 = getPNGsInDir("Archive_2/")
+
 iso400 = getPNGsInDir("data/aligned-ISO400-16/")
 iso3200 = getPNGsInDir("data/aligned-ISO3200-16/")
 green = getPNGsInDir("data/green/")
 # raw, rawnames = getRawPNGsInDir("data/raw/")
-# signsm = io.imreadGrey("data/raw/signs-small.png")
+signsm = io.imreadGrey("data/raw/signs-small.png")
 
-#***You can test on the first N images of a list by feeding im[:N] as the argument instead of im***
-
-#example for testing denoise and logSNR
-# testDenoise(iso400, "iso400")
-# testDenoise(iso3200, "iso3200")
+testDenoise(iso400, "iso400")
+testDenoise(iso3200, "iso3200")
 
 testSNR(iso400, "iso400")
-# testSNR(iso3200, "iso3200")
+testSNR(iso3200, "iso3200")
 
-# testAlign()
-# testDenoise(green, 'green')
-# testAlignAndDenoise(green[:9], 'green')
+testAlign()
+testDenoise(green, 'green')
+testAlignAndDenoise(green, 'green')
 
-# testAlign()
-
-# testBasicDemosaic(signsm, 'signSmall', 0)
-# testEdgeBasedGreenDemosaic(signsm, 'signSmall', 0)
-# testImprovedDemosaic(signsm, 'signSmall', 0)
+testBasicDemosaic(signsm, 'signSmall')
+testEdgeBasedGreenDemosaic(signsm, 'signSmall')
+testImprovedDemosaic(signsm, 'signSmall')
 
 # testSergei()
