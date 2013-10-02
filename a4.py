@@ -20,7 +20,7 @@ def logSNR(imageList, scale=1.0/20.0):
 
 def align(im1, im2, maxOffset=20):
     '''takes two images and a maxOffset. Returns the y, x offset that best aligns im2 to im1.'''
-    mindiff = im1.shape[0] * im1.shape[1] * im1.shape[2]
+    mindiff = im1.shape[0] * im1.shape[1] * 3
     for y in xrange(-maxOffset, maxOffset + 1):
         for x in xrange(-maxOffset, maxOffset + 1):
             shift = np.roll(np.roll(im2, x, axis=1), y, axis=0)
@@ -122,9 +122,22 @@ def improvedDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offsetBlueY
 
 def split(raw):
     '''splits one of Sergei's images into a 3-channel image with height that is floor(height_of_raw/3.0). Returns the 3-channel image.'''
+    height = int(raw.shape[0] / 3.0)
+    out = np.zeros((height, raw.shape[1], 3))
+    for i in xrange(3):
+        out[:,:,2-i] = raw[i * height : (i+1) * height]
+    return out
 
 def sergeiRGB(raw, alignTo=1):
     '''Splits the raw image, then aligns two of the channels to the third. Returns the aligned color image.'''
+    channels = split(raw)
+    im1 = channels[:,:,alignTo]
+    for i in xrange(3):
+        if i != alignTo:
+            im2 = channels[:,:,i]
+            yshift, xshift = align(im1, im2)
+            channels[:,:,i] = np.roll(np.roll(im2, xshift, axis=1), yshift, axis=0)
+    return channels
 
 def imIter(im):
     for y in xrange(im.shape[0]):
