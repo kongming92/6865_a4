@@ -1,6 +1,6 @@
-#assignment 4 starter code
-#by Abe Davis
-#
+# assignment 4 starter code
+# by Abe Davis
+
 # Student Name: Charles Liu
 # MIT Email: cliu2014@mit.edu
 
@@ -16,7 +16,7 @@ def logSNR(imageList, scale=1.0/20.0):
     N = len(imageList)
     mean, E_x2 = tuple(map(lambda x: x/float(N), reduce(lambda x, y: (x[0] + y, x[1] + y**2), imageList, (np.zeros(shape), np.zeros(shape)))))
     variance = np.maximum(reduce(lambda x, y: x + (y - mean) ** 2, imageList, np.zeros(shape)) / float(N-1), np.array([1e-6] * 3))
-    return scale * np.log10(np.maximum(E_x2, np.array([1e-6]*3)) / variance)
+    return scale * np.log10(np.maximum(E_x2, np.array([1e-6]*3)) / variance) # prevent log(0) errors
 
 def align(im1, im2, maxOffset=20):
     '''takes two images and a maxOffset. Returns the y, x offset that best aligns im2 to im1.'''
@@ -26,9 +26,7 @@ def align(im1, im2, maxOffset=20):
             shift = np.roll(np.roll(im2, x, axis=1), y, axis=0)
             differences = np.sum((im1[maxOffset:-maxOffset, maxOffset:-maxOffset] - shift[maxOffset:-maxOffset, maxOffset:-maxOffset])**2)
             if differences < mindiff:
-                mindiff = differences
-                xmin = x
-                ymin = y
+                mindiff, xmin, ymin = (differences, x, y)
     return ymin, xmin
 
 def alignAndDenoise(imageList, maxOffset=20):
@@ -44,35 +42,37 @@ def alignAndDenoise(imageList, maxOffset=20):
 def basicGreen(raw, offset=1):
     '''takes a raw image and an offset. Returns the interpolated green channel of your image using the basic technique.'''
     offset = (offset + 1) % 2
-    out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2))
+    out = np.zeros(raw.shape)
+    height, width = (raw.shape[0], raw.shape[1])
     for y, x in imIter(out):
-        yorig, xorig = (y+1, x+1)
-        if (xorig + yorig + offset) % 2 == 0:
-            out[y, x] = raw[yorig, xorig]
-        else:
-            out[y, x] = 0.25 * (raw[yorig+1, xorig] + raw[yorig-1, xorig] + raw[yorig, xorig+1] + raw[yorig, xorig-1])
+        if y > 0 and y < height-1 and x > 0 and x < width-1:
+            if (x + y + offset) % 2 == 0:
+                out[y, x] = raw[y, x]
+            else:
+                out[y, x] = 0.25 * (raw[y+1, x] + raw[y-1, x] + raw[y, x+1] + raw[y, x-1])
     return out
 
 def basicRorB(raw, offsetY, offsetX):
     '''takes a raw image and an offset in x and y. Returns the interpolated red or blue channel of your image using the basic technique.'''
-    out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2))
+    out = np.zeros(raw.shape)
+    height, width = (raw.shape[0], raw.shape[1])
     for y, x in imIter(out):
-        yorig, xorig = (y+1, x+1)
-        if (xorig + offsetX) % 2 == 0:
-            if (yorig + offsetY) % 2 == 0:
-                out[y, x] = raw[yorig, xorig]
+        if y > 0 and y < height-1 and x > 0 and x < width-1:
+            if (x + offsetX) % 2 == 0:
+                if (y + offsetY) % 2 == 0:
+                    out[y, x] = raw[y, x]
+                else:
+                    out[y, x] = 0.5 * (raw[y-1, x] + raw[y+1, x])
             else:
-                out[y, x] = 0.5 * (raw[yorig-1, xorig] + raw[yorig+1, xorig])
-        else:
-            if (yorig + offsetY) % 2 == 0:
-                out[y, x] = 0.5 * (raw[yorig, xorig-1] + raw[yorig, xorig + 1])
-            else:
-                out[y, x] = 0.25 * (raw[yorig+1, xorig+1] + raw[yorig-1, xorig+1] + raw[yorig+1, xorig-1] + raw[yorig-1, xorig-1])
+                if (y + offsetY) % 2 == 0:
+                    out[y, x] = 0.5 * (raw[y, x-1] + raw[y, x + 1])
+                else:
+                    out[y, x] = 0.25 * (raw[y+1, x+1] + raw[y-1, x+1] + raw[y+1, x-1] + raw[y-1, x-1])
     return out
 
 def basicDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offsetBlueY=0, offsetBlueX=0):
     '''takes a raw image and a bunch of offsets. Returns an rgb image computed with our basic techniche.'''
-    out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2, 3))
+    out = np.zeros(raw.shape + (3,))
     out[:,:,0] = basicRorB(raw, offsetRedY, offsetRedX)
     out[:,:,1] = basicGreen(raw, offsetGreen)
     out[:,:,2] = basicRorB(raw, offsetBlueY, offsetBlueX)
@@ -80,7 +80,7 @@ def basicDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offsetBlueY=0,
 
 def edgeBasedGreenDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offsetBlueY=0, offsetBlueX=0):
     '''same as basicDemosaic except it uses the edge based technique to produce the green channel.'''
-    out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2, 3))
+    out = np.zeros(raw.shape + (3,))
     out[:,:,0] = basicRorB(raw, offsetRedY, offsetRedX)
     out[:,:,1] = edgeBasedGreen(raw, offsetGreen)
     out[:,:,2] = basicRorB(raw, offsetBlueY, offsetBlueX)
@@ -89,35 +89,34 @@ def edgeBasedGreenDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offse
 def edgeBasedGreen(raw, offset=1):
     '''same as basicGreen, but uses the edge based technique.'''
     offset = (offset + 1) % 2
-    out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2))
+    out = np.zeros(raw.shape)
+    height, width = (raw.shape[0], raw.shape[1])
     for y, x in imIter(out):
-        yorig, xorig = (y+1, x+1)
-        if (xorig + yorig + offset) % 2 == 0:
-            out[y, x] = raw[yorig, xorig]
-        else:
-            vert = abs(raw[yorig-1, xorig] - raw[yorig+1, xorig])
-            hori = abs(raw[yorig, xorig-1] - raw[yorig, xorig+1])
-            if vert < hori:
-                out[y, x] = 0.5 * (raw[yorig-1, xorig] + raw[yorig+1, xorig])
+        if y > 0 and y < height-1 and x > 0 and x < width-1:
+            if (x + y + offset) % 2 == 0:
+                out[y, x] = raw[y, x]
             else:
-                out[y, x] = 0.5 * (raw[yorig, xorig-1] + raw[yorig, xorig+1])
+                vert = abs(raw[y-1, x] - raw[y+1, x])
+                hori = abs(raw[y, x-1] - raw[y, x+1])
+                if vert < hori:
+                    out[y, x] = 0.5 * (raw[y-1, x] + raw[y+1, x])
+                else:
+                    out[y, x] = 0.5 * (raw[y, x-1] + raw[y, x+1])
     return out
 
 def greenBasedRorB(raw, green, offsetY, offsetX):
     '''Same as basicRorB but also takes an interpolated green channel and uses this channel to implement the green based technique.'''
     subtracted = np.zeros(green.shape)
     for y, x in imIter(subtracted):
-        yorig, xorig = (y+1, x+1)
-        if (xorig + offsetX) % 2 == 0 and (yorig + offsetY) % 2 == 0:
-            subtracted[y, x] = max(raw[yorig, xorig] - green[y, x], 0)
-    interpolated = basicRorB(subtracted, (offsetY + 1) % 2, (offsetX + 1) % 2)
-    return interpolated + green[1:-1, 1:-1]
+        if (x + offsetX) % 2 == 0 and (y + offsetY) % 2 == 0:
+            subtracted[y, x] = max(raw[y, x] - green[y, x], 0)
+    return basicRorB(subtracted, offsetY, offsetX) + green
 
 def improvedDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offsetBlueY=0, offsetBlueX=0):
-    out = np.zeros((raw.shape[0] - 4, raw.shape[1] - 4, 3))
+    out = np.zeros(raw.shape + (3,))
     green = edgeBasedGreen(raw, offsetGreen)
     out[:,:,0] = greenBasedRorB(raw, green, offsetRedY, offsetRedX)
-    out[:,:,1] = green[1:-1, 1:-1]
+    out[:,:,1] = green
     out[:,:,2] = greenBasedRorB(raw, green, offsetBlueY, offsetBlueX)
     return out
 
