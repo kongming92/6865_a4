@@ -7,8 +7,7 @@
 import numpy as np
 
 def denoiseSeq(imageList):
-    '''Takes a list of images, returns a denoised image
-    '''
+    '''Takes a list of images, returns a denoised image'''
     return sum(imageList) / float(len(imageList))
 
 def logSNR(imageList, scale=1.0/20.0):
@@ -16,8 +15,8 @@ def logSNR(imageList, scale=1.0/20.0):
     shape = imageList[0].shape
     N = len(imageList)
     mean, E_x2 = tuple(map(lambda x: x/float(N), reduce(lambda x, y: (x[0] + y, x[1] + y**2), imageList, (np.zeros(shape), np.zeros(shape)))))
-    variance = np.maximum(reduce(lambda x, y: x + (y - mean) ** 2, imageList, np.zeros(shape)) / (N-1), np.array([1e-6 * 3]))
-    return scale * np.log10(E_x2 / variance)
+    variance = np.maximum(reduce(lambda x, y: x + (y - mean) ** 2, imageList, np.zeros(shape)) / float(N-1), np.array([1e-6] * 3))
+    return scale * np.log10(np.maximum(E_x2, np.array([1e-6]*3)) / variance)
 
 def align(im1, im2, maxOffset=20):
     '''takes two images and a maxOffset. Returns the y, x offset that best aligns im2 to im1.'''
@@ -44,6 +43,7 @@ def alignAndDenoise(imageList, maxOffset=20):
 
 def basicGreen(raw, offset=1):
     '''takes a raw image and an offset. Returns the interpolated green channel of your image using the basic technique.'''
+    offset = (offset + 1) % 2
     out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2))
     for y, x in imIter(out):
         yorig, xorig = (y+1, x+1)
@@ -88,6 +88,7 @@ def edgeBasedGreenDemosaic(raw, offsetGreen=0, offsetRedY=1, offsetRedX=1, offse
 
 def edgeBasedGreen(raw, offset=1):
     '''same as basicGreen, but uses the edge based technique.'''
+    offset = (offset + 1) % 2
     out = np.zeros((raw.shape[0] - 2, raw.shape[1] - 2))
     for y, x in imIter(out):
         yorig, xorig = (y+1, x+1)
